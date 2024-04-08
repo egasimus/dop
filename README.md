@@ -1,6 +1,6 @@
 # dop
 
->The anticipation of most types of rewards increases the level of **dop**amine in the brain
+>The anticipation of most types of rewards increases the level of **dop**amine in the brain.
 
 ## Usage
 
@@ -17,14 +17,14 @@ For more info:
 Do a new thing:
 
 ```
-$ dop smoke
-New action registered: "smoke".
+$ dop doomscroll
+New action registered: "doomscroll".
 
 If this is something you want to do more often:
-  dop -g smoke
+  dop -g doomscroll
 
 If this is something you want to do less often:
-  dop -b smoke
+  dop -b doomscroll
 
 For more info:
   dop -h
@@ -33,8 +33,8 @@ For more info:
 Set the valence of a thing:
 
 ```
-$ dop -b smoke
-Valence of action "smoke" set to "bad".
+$ dop -b doomscroll
+Valence of action "doomscroll" set to "bad".
 
 Dop will discourage you from taking this action.
 ```
@@ -42,10 +42,10 @@ Dop will discourage you from taking this action.
 Set the valence of a new thing:
 
 ```
-$ dop -g eat
-New action registered: "eat".
+$ dop -g meditate
+New action registered: "meditate".
 
-Valence of action "eat" set to "good".
+Valence of action "meditate" set to "good".
 
 Dop will encourage you to take this action.
 ```
@@ -55,10 +55,10 @@ Show status:
 ```
 $ dop
 
-| Action | Last   | Frequency   |
-| ------ | ------ | ----------- |
-| eat    | 1m ago | no data yet |
-| smoke  | 1m ago | no data yet |
+| Action     | Last   | Frequency   |
+| ---------- | ------ | ----------- |
+| meditate   | 1m ago | no data yet |
+| doomscroll | 1m ago | no data yet |
 
 For more info:
   dop -h
@@ -72,9 +72,9 @@ Configuration is stored in `~/.config/dop/dop.toml`,
 in the following format:
 
 ```toml
-[actions.eat]
+[actions.meditate]
 valence = "good"
 
-[actions.smoke]
+[actions.doomscroll]
 valence = "bad"
 ```

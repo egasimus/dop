@@ -1,8 +1,19 @@
+use std::error::Error;
+use std::path::{Path};
+use std::fs::{File, create_dir_all, read_to_string, write};
+use toml::{Table, to_string};
 use clap::Parser;
 use microxdg::XdgApp;
-use std::error::Error;
-use std::path::{Path, PathBuf};
-use std::fs::create_dir_all;
+
+type Maybe<T> = Result<T, Box<dyn Error>>;
+
+#[derive(Debug)]
+struct App {
+    /// State
+    xdg: XdgApp,
+    /// Command
+    cli: Cli,
+}
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
@@ -19,36 +30,72 @@ struct Cli {
     bad: bool,
 }
 
-fn main () -> Result<(), Box<dyn Error>> {
-    let cli = Cli::parse();
-    println!("{cli:?}");
-    let xdg = XdgApp::new("dop")?;
-    println!("{xdg:?}");
-    let config_dir = xdg.app_config()?;
+fn main () -> Maybe<()> {
+    let app = App {
+        xdg: XdgApp::new("dop")?,
+        cli: Cli::parse(),
+    };
+    create_dirs(&app)?;
+    if app.cli.action.is_some() {
+        track_action(&app)
+    } else {
+        show_status(&app)
+    }
+}
+
+fn create_dirs (app: &App) -> Maybe<()> {
+    let config_dir = app.xdg.app_config()?;
     if !Path::new(&config_dir).exists() {
         println!("Creating {config_dir:?}");
         create_dir_all(&config_dir)?;
     }
-    let data_dir = xdg.app_data()?;
+    let config_path = config_dir.join("dop.toml");
+    if !Path::new(&config_path).exists() {
+        println!("Creating {config_path:?}");
+        File::create_new(&config_path)?;
+    }
+    let data_dir = app.xdg.app_data()?;
     if !Path::new(&data_dir).exists() {
         println!("Creating {data_dir:?}");
         create_dir_all(&data_dir)?;
     }
-    if let Some(action) = cli.action {
-        track_action(&config_dir, &data_dir, &action)
-    } else {
-        display_status(&config_dir, &data_dir)
+    Ok(())
+}
+
+fn track_action (app: &App) -> Maybe<()> {
+    let config_path = app.xdg.app_config()?.join("dop.toml");
+    let config_text = read_to_string(&config_path)?;
+    let mut update_config = false;
+    let mut config = config_text.parse::<Table>()?;
+    if !config.contains_key("actions") {
+        config.insert("actions".into(), Table::new().into());
+        update_config = true;
     }
+    let actions = config.get_mut("actions").unwrap().as_table_mut().unwrap();
+    let action_name = app.cli.action.clone().unwrap();
+    if !actions.contains_key(&action_name) {
+        println!("Registering new action: \"{action_name}\"");
+        actions.insert(action_name.clone().into(), Table::new().into());
+        update_config = true;
+    }
+    if app.cli.good {
+        println!("Setting valence of \"{action_name}\" to \"good\". Yay!");
+        let action = actions.get_mut(&action_name).unwrap().as_table_mut().unwrap();
+        action.insert("good".into(), true.into());
+        update_config = true;
+    }
+    if app.cli.bad {
+        println!("Setting valence of \"{action_name}\" to \"bad\". Boo!");
+        let action = actions.get_mut(&action_name).unwrap().as_table_mut().unwrap();
+        action.insert("bad".into(), true.into());
+        update_config = true;
+    }
+    if update_config {
+        write(&config_path, to_string(&config)?)?;
+    }
+    Ok(())
 }
 
-fn track_action (config_dir: &PathBuf, data_dir: &PathBuf, action: &str)
-    -> Result<(), Box<dyn Error>>
-{
-    unimplemented!();
-}
-
-fn display_status (config_dir: &PathBuf, data_dir: &PathBuf)
-    -> Result<(), Box<dyn Error>>
-{
+fn show_status (app: &App) -> Maybe<()> {
     unimplemented!();
 }
