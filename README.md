@@ -73,8 +73,8 @@ in the following format:
 
 ```toml
 [actions.meditate]
-valence = "good"
+good = true
 
 [actions.doomscroll]
-valence = "bad"
+bad = true
 ```

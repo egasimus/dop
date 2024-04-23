@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::fs::{File, create_dir_all, read_to_string, write, OpenOptions};
 use std::io::Write;
 use std::time::{SystemTime, UNIX_EPOCH};
-use toml::{Table, to_string};
+use toml::{Table, map::Map, Value, to_string};
 use clap::Parser;
 use microxdg::XdgApp;
 
@@ -64,7 +64,7 @@ fn create_dirs (app: &App) -> Maybe<()> {
     Ok(())
 }
 
-fn define_action (app: &App) -> Maybe<()> {
+fn define_action (app: &App) -> Maybe<Map<String, Value>> {
     // Load config
     let config_path = app.xdg.app_config()?.join("dop.toml");
     let config_text = read_to_string(&config_path)?;
@@ -100,19 +100,33 @@ fn define_action (app: &App) -> Maybe<()> {
     if update_config {
         write(&config_path, to_string(&config)?)?;
     }
-    Ok(())
+    Ok(config.get("actions").unwrap().as_table().unwrap().clone())
 }
 
 fn track_action (app: &App) -> Maybe<()> {
     let start = SystemTime::now();
     let timestamp = start.duration_since(UNIX_EPOCH)?.as_secs();
-    define_action(app)?;
+    let actions = define_action(app)?;
     let action = app.cli.action.clone().expect("no action passed");
     let mut file_path = PathBuf::from(app.xdg.app_data()?);
     file_path.extend(&[&action]);
     let mut file = OpenOptions::new().create(true).write(true).append(true).open(&file_path)?;
     writeln!(file, "{}", timestamp)?;
     println!("Tracked action: {action}");
+    let action = actions.get(&action).unwrap().as_table().unwrap();
+    let good = action.get("good").map(|v|v.as_bool().unwrap()).unwrap_or(false);
+    let bad = action.get("bad").map(|v|v.as_bool().unwrap()).unwrap_or(false);
+    if good && bad {
+        println!("This is an action you've defined as ambivalent (both good and bad).");
+        println!("Consider the consequences wisely.");
+    } else if good {
+        println!("Yay! Keep it up!");
+    } else if bad {
+        println!("Ugh. Cut it out!");
+    } else {
+        println!("You haven't defined the valence of this action.");
+        println!("Consider the consequences wisely.");
+    }
     Ok(())
 }
 
