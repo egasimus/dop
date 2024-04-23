@@ -66,8 +66,6 @@ For more info:
 
 ## Configuration
 
-Data is stored in `~/.local/share/dop/<ACTION>.ndjson`
-
 Configuration is stored in `~/.config/dop/dop.toml`,
 in the following format:
 
@@ -78,3 +76,6 @@ good = true
 [actions.doomscroll]
 bad = true
 ```
+
+Data is stored in `~/.local/share/dop/<ACTION>.ndjson`
+as one timestamp per line.
