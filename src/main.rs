@@ -1,6 +1,8 @@
 use std::error::Error;
-use std::path::{Path};
-use std::fs::{File, create_dir_all, read_to_string, write};
+use std::path::{Path, PathBuf};
+use std::fs::{File, create_dir_all, read_to_string, write, OpenOptions};
+use std::io::Write;
+use std::time::{SystemTime, UNIX_EPOCH};
 use toml::{Table, to_string};
 use clap::Parser;
 use microxdg::XdgApp;
@@ -62,11 +64,13 @@ fn create_dirs (app: &App) -> Maybe<()> {
     Ok(())
 }
 
-fn track_action (app: &App) -> Maybe<()> {
+fn define_action (app: &App) -> Maybe<()> {
+    // Load config
     let config_path = app.xdg.app_config()?.join("dop.toml");
     let config_text = read_to_string(&config_path)?;
     let mut update_config = false;
     let mut config = config_text.parse::<Table>()?;
+    // Define action
     if !config.contains_key("actions") {
         config.insert("actions".into(), Table::new().into());
         update_config = true;
@@ -78,24 +82,40 @@ fn track_action (app: &App) -> Maybe<()> {
         actions.insert(action_name.clone().into(), Table::new().into());
         update_config = true;
     }
+    // Set action as good
     if app.cli.good {
         println!("Setting valence of \"{action_name}\" to \"good\". Yay!");
         let action = actions.get_mut(&action_name).unwrap().as_table_mut().unwrap();
         action.insert("good".into(), true.into());
         update_config = true;
     }
+    // Set action as bad
     if app.cli.bad {
         println!("Setting valence of \"{action_name}\" to \"bad\". Boo!");
         let action = actions.get_mut(&action_name).unwrap().as_table_mut().unwrap();
         action.insert("bad".into(), true.into());
         update_config = true;
     }
+    // If there were changes to the config, write it now
     if update_config {
         write(&config_path, to_string(&config)?)?;
     }
     Ok(())
 }
 
+fn track_action (app: &App) -> Maybe<()> {
+    let start = SystemTime::now();
+    let timestamp = start.duration_since(UNIX_EPOCH)?.as_secs();
+    define_action(app)?;
+    let action = app.cli.action.clone().expect("no action passed");
+    let mut file_path = PathBuf::from(app.xdg.app_data()?);
+    file_path.extend(&[&action]);
+    let mut file = OpenOptions::new().create(true).write(true).append(true).open(&file_path)?;
+    writeln!(file, "{}", timestamp)?;
+    println!("Tracked action: {action}");
+    Ok(())
+}
+
 fn show_status (app: &App) -> Maybe<()> {
-    unimplemented!();
+    unimplemented!("show status");
 }
